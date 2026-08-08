@@ -22,10 +22,12 @@ import dev.macula.cloud.iam.utils.ScopeException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.MessageSource;
 import org.springframework.context.MessageSourceAware;
 import org.springframework.context.support.MessageSourceAccessor;
 import org.springframework.security.authentication.*;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.SpringSecurityMessageSource;
@@ -61,6 +63,13 @@ import java.util.Set;
 public abstract class OAuth2ResourceOwnerBaseAuthenticationProvider<T extends OAuth2ResourceOwnerBaseAuthenticationToken>
     implements AuthenticationProvider, MessageSourceAware {
 
+    private ApplicationContext applicationContext;
+    private DaoAuthenticationProvider lazyDaoProvider;
+
+    public void setApplicationContext(ApplicationContext applicationContext) {
+        this.applicationContext = applicationContext;
+    }
+
     private static final Logger LOGGER = LogManager.getLogger(OAuth2ResourceOwnerBaseAuthenticationProvider.class);
 
     private static final String ERROR_URI = "https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.2.1";
@@ -88,6 +97,36 @@ public abstract class OAuth2ResourceOwnerBaseAuthenticationProvider<T extends OA
         this.authenticationManager = authenticationManager;
         this.authorizationService = authorizationService;
         this.tokenGenerator = tokenGenerator;
+    }
+
+    private Authentication getAuthenticationFromManager(Authentication authenticationToken) {
+        try {
+            return authenticationManager.authenticate(authenticationToken);
+        } catch (Exception e) {
+            LOGGER.warn("authenticationManager.authenticate failed: " + e.getClass().getName() + ": " + e.getMessage());
+            // 延迟创建 DaoAuthenticationProvider
+            if (lazyDaoProvider == null && applicationContext != null) {
+                try {
+                    LOGGER.info("Attempting to create DaoAuthenticationProvider from ApplicationContext");
+                    org.springframework.security.core.userdetails.UserDetailsService uds =
+                        (org.springframework.security.core.userdetails.UserDetailsService)
+                        applicationContext.getBean("sysUserDetailsService");
+                    org.springframework.security.crypto.password.PasswordEncoder pe =
+                        applicationContext.getBean(org.springframework.security.crypto.password.PasswordEncoder.class);
+                    lazyDaoProvider = new DaoAuthenticationProvider();
+                    lazyDaoProvider.setUserDetailsService(uds);
+                    lazyDaoProvider.setPasswordEncoder(pe);
+                    LOGGER.info("DaoAuthenticationProvider created successfully");
+                } catch (Exception ex) {
+                    LOGGER.error("Failed to create DaoAuthenticationProvider: " + ex.getMessage(), ex);
+                    throw e;
+                }
+            }
+            if (lazyDaoProvider != null) {
+                return lazyDaoProvider.authenticate(authenticationToken);
+            }
+            throw e;
+        }
     }
 
     public abstract AbstractAuthenticationToken buildToken(Map<String, Object> reqParameters);
@@ -150,7 +189,7 @@ public abstract class OAuth2ResourceOwnerBaseAuthenticationProvider<T extends OA
 
             LOGGER.debug("got authenticationToken=" + authenticationToken);
 
-            Authentication usernamePasswordAuthentication = authenticationManager.authenticate(authenticationToken);
+            Authentication usernamePasswordAuthentication = getAuthenticationFromManager(authenticationToken);
 
             // @formatter:off
             DefaultOAuth2TokenContext.Builder tokenContextBuilder = DefaultOAuth2TokenContext.builder()

@@ -135,6 +135,8 @@ public class ProtocolOAuth2Configuration {
      */
     private void addCustomOAuth2GrantAuthenticationProvider(HttpSecurity http) {
         AuthenticationManager authenticationManager = http.getSharedObject(AuthenticationManager.class);
+        org.springframework.context.ApplicationContext applicationContext =
+            http.getSharedObject(org.springframework.context.ApplicationContext.class);
         OAuth2AuthorizationService authorizationService = http.getSharedObject(OAuth2AuthorizationService.class);
 
         // 注入Token 增加关联用户信息
@@ -151,11 +153,13 @@ public class ProtocolOAuth2Configuration {
         OAuth2ResourceOwnerPasswordAuthenticationProvider resourceOwnerPasswordAuthenticationProvider =
             new OAuth2ResourceOwnerPasswordAuthenticationProvider(authenticationManager, authorizationService,
                 oAuth2TokenGenerator);
+        resourceOwnerPasswordAuthenticationProvider.setApplicationContext(applicationContext);
 
         // grant_type=sms
         OAuth2ResourceOwnerSmsAuthenticationProvider resourceOwnerSmsAuthenticationProvider =
             new OAuth2ResourceOwnerSmsAuthenticationProvider(authenticationManager, authorizationService,
                 oAuth2TokenGenerator);
+        resourceOwnerSmsAuthenticationProvider.setApplicationContext(applicationContext);
 
         // 处理 OAuth2ResourceOwnerPasswordAuthenticationToken
         http.authenticationProvider(resourceOwnerPasswordAuthenticationProvider);
