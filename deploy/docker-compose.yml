@@ -1,0 +1,70 @@
+# Macula Cloud 本地基础设施一键部署
+#
+# 用法（在 deploy/ 目录执行）：
+#   docker compose up -d
+# 首次启动 MySQL 会自动按文件名顺序导入 initdb 下的全部 SQL（utf8mb4）。
+#
+# 端口：MySQL 3306 / Nacos 8848(+9848 grpc) / Redis 6379(默认注释，见说明)
+#
+# 注意：
+# 1. Redis 默认注释——若宿主机 6379 已有 Redis（如其他项目容器）可直接复用；
+#    否则取消注释 redis 服务。
+# 2. Nacos 数据保存在 named volume，重启用 docker compose down（不加 -v）不丢数据。
+# 3. 连字符库名（macula-system 等）在 SQL 中必须用反引号包裹。
+
+services:
+  mysql:
+    image: mysql:8.0.35
+    container_name: macula-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+      TZ: Asia/Shanghai
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    ports:
+      - "3306:3306"
+    volumes:
+      - macula-mysql-data:/var/lib/mysql
+      # 首次初始化按文件名序执行；前缀保证顺序
+      - ../macula-cloud-system/docs/macula-system-dump.sql:/docker-entrypoint-initdb.d/01-macula-system.sql:ro
+      - ../macula-cloud-tinyid/docs/macula-tinyid-dump.sql:/docker-entrypoint-initdb.d/02-macula-tinyid.sql:ro
+      - ../macula-cloud-xxljob/docs/macula-xxljob-dump.sql:/docker-entrypoint-initdb.d/03-xxl-job.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  nacos:
+    image: nacos/nacos-server:v2.2.3
+    container_name: macula-nacos
+    restart: unless-stopped
+    environment:
+      MODE: standalone
+      JVM_XMS: 256m
+      JVM_XMX: 256m
+      TZ: Asia/Shanghai
+    ports:
+      - "8848:8848"
+      - "9848:9848"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8848/nacos/v1/console/health/readiness"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  # 默认注释：6379 常被宿主机已有 Redis 占用。需要独立 Redis 时取消注释，
+  # 并确认端口无冲突（或改左侧端口 + 同步修改应用配置）。
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: macula-redis
+  #   restart: unless-stopped
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - macula-redis-data:/data
+
+volumes:
+  macula-mysql-data:

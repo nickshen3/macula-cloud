@@ -24,7 +24,9 @@
     <parent>
         <groupId>dev.macula.boot</groupId>
         <artifactId>macula-boot-parent</artifactId>
-        <version>6.0.1-SNAPSHOT</version>
+        <!-- P0-1 锁定：固定到 2026-06-10 发布的 SNAPSHOT 时间戳版本（已全链路验证），
+             避免上游 SNAPSHOT 漂移（-13 已变更为 Boot 3.5.13/Cloud 2025.0.2，属 P1-1 升级目标） -->
+        <version>6.0.1-20260610.013910-7</version>
     </parent>
 
     <groupId>dev.macula.cloud</groupId>

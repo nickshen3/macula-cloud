@@ -4,6 +4,8 @@
 	<strong>基于Macula Boot开发的通用(认证、权限等)技术应用平台</strong>
 </p>
 
+> 🚀 **从零部署？** 见 [docs/quickstart.md](docs/quickstart.md)（含 Windows 常见坑速查）。改进计划见 [IMPROVEMENT-PLAN.md](IMPROVEMENT-PLAN.md)。
+
 <p align="center">
     <a href="https://github.com/macula-projects/macula-cloud/blob/main/LICENSE" target="_blank">
         <img src="https://img.shields.io/github/license/macula-projects/macula-cloud.svg" >

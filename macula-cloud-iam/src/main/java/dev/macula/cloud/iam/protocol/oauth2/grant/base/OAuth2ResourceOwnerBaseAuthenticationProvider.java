@@ -26,6 +26,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.MessageSource;
 import org.springframework.context.MessageSourceAware;
 import org.springframework.context.support.MessageSourceAccessor;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.authentication.*;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.core.Authentication;
@@ -43,6 +44,10 @@ import org.springframework.security.oauth2.server.authorization.context.Authoriz
 import org.springframework.security.oauth2.server.authorization.token.DefaultOAuth2TokenContext;
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenContext;
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenGenerator;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
+
+import java.time.Duration;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 
@@ -65,6 +70,13 @@ public abstract class OAuth2ResourceOwnerBaseAuthenticationProvider<T extends OA
 
     private ApplicationContext applicationContext;
     private DaoAuthenticationProvider lazyDaoProvider;
+    private StringRedisTemplate rateLimitRedis;
+
+    /** 登录失败锁定阈值（账号/IP 双维度各自计数） */
+    private static final int LOGIN_MAX_FAIL = 5;
+    /** 锁定时长（秒） */
+    private static final long LOGIN_LOCK_SECONDS = 600;
+    private static final String LOGIN_FAIL_KEY_PREFIX = "login:fail:";
 
     public void setApplicationContext(ApplicationContext applicationContext) {
         this.applicationContext = applicationContext;
@@ -129,6 +141,99 @@ public abstract class OAuth2ResourceOwnerBaseAuthenticationProvider<T extends OA
         }
     }
 
+    // ==================== P0-5 登录防爆破限流 ====================
+
+    private StringRedisTemplate rateLimitRedis() {
+        if (rateLimitRedis == null && applicationContext != null) {
+            try {
+                rateLimitRedis = applicationContext.getBean(StringRedisTemplate.class);
+            } catch (Exception ex) {
+                LOGGER.warn("StringRedisTemplate unavailable, login rate-limit disabled: " + ex.getMessage());
+            }
+        }
+        return rateLimitRedis;
+    }
+
+    private void checkLoginLock(String principal) {
+        StringRedisTemplate redis = rateLimitRedis();
+        if (redis == null) {
+            return;
+        }
+        try {
+            if (failCount(redis, "acct", principal) >= LOGIN_MAX_FAIL
+                || failCount(redis, "ip", getClientIp()) >= LOGIN_MAX_FAIL) {
+                LOGGER.warn("Login locked: principal=" + principal + " ip=" + getClientIp());
+                throw new OAuth2AuthenticationException(
+                    new OAuth2Error(OAuth2ErrorCodes.ACCESS_DENIED, "登录失败次数过多，请 10 分钟后再试", null));
+            }
+        } catch (OAuth2AuthenticationException e) {
+            throw e;
+        } catch (Exception ex) {
+            LOGGER.warn("login rate-limit check error (fail-open): " + ex.getMessage());
+        }
+    }
+
+    private void recordLoginFail(String principal) {
+        StringRedisTemplate redis = rateLimitRedis();
+        if (redis == null) {
+            return;
+        }
+        try {
+            incrFail(redis, "acct", principal);
+            incrFail(redis, "ip", getClientIp());
+        } catch (Exception ex) {
+            LOGGER.warn("login fail count error: " + ex.getMessage());
+        }
+    }
+
+    private void clearLoginFail(String principal) {
+        StringRedisTemplate redis = rateLimitRedis();
+        if (redis == null) {
+            return;
+        }
+        try {
+            // 仅清账号维度；IP 维度自然过期，避免误清同 IP 其他账号的失败记录
+            redis.delete(LOGIN_FAIL_KEY_PREFIX + "acct:" + principal);
+        } catch (Exception ex) {
+            LOGGER.warn("login fail clear error: " + ex.getMessage());
+        }
+    }
+
+    private long failCount(StringRedisTemplate redis, String dim, String val) {
+        String v = redis.opsForValue().get(LOGIN_FAIL_KEY_PREFIX + dim + ":" + val);
+        if (v == null) {
+            return 0;
+        }
+        try {
+            return Long.parseLong(v);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
+    private void incrFail(StringRedisTemplate redis, String dim, String val) {
+        String key = LOGIN_FAIL_KEY_PREFIX + dim + ":" + val;
+        Long n = redis.opsForValue().increment(key);
+        if (n != null && n == 1) {
+            redis.expire(key, Duration.ofSeconds(LOGIN_LOCK_SECONDS));
+        }
+    }
+
+    private String getClientIp() {
+        try {
+            ServletRequestAttributes attrs = (ServletRequestAttributes)RequestContextHolder.getRequestAttributes();
+            if (attrs != null) {
+                String xff = attrs.getRequest().getHeader("X-Forwarded-For");
+                if (xff != null && !xff.isBlank()) {
+                    return xff.split(",")[0].trim();
+                }
+                return attrs.getRequest().getRemoteAddr();
+            }
+        } catch (Exception ignored) {
+        }
+        return "unknown";
+    }
+
     public abstract AbstractAuthenticationToken buildToken(Map<String, Object> reqParameters);
 
     /**
@@ -189,7 +294,18 @@ public abstract class OAuth2ResourceOwnerBaseAuthenticationProvider<T extends OA
 
             LOGGER.debug("got authenticationToken=" + authenticationToken);
 
-            Authentication usernamePasswordAuthentication = getAuthenticationFromManager(authenticationToken);
+            // P0-5 登录防爆破：账号/IP 双维度限流，5 次失败锁定 10 分钟
+            String loginPrincipal = String.valueOf(authenticationToken.getPrincipal());
+            checkLoginLock(loginPrincipal);
+
+            Authentication usernamePasswordAuthentication;
+            try {
+                usernamePasswordAuthentication = getAuthenticationFromManager(authenticationToken);
+            } catch (BadCredentialsException | InternalAuthenticationServiceException e) {
+                recordLoginFail(loginPrincipal);
+                throw e;
+            }
+            clearLoginFail(loginPrincipal);
 
             // @formatter:off
             DefaultOAuth2TokenContext.Builder tokenContextBuilder = DefaultOAuth2TokenContext.builder()
@@ -279,6 +395,10 @@ public abstract class OAuth2ResourceOwnerBaseAuthenticationProvider<T extends OA
      */
     private OAuth2AuthenticationException oAuth2AuthenticationException(Authentication authentication,
         AuthenticationException authenticationException) {
+        // 已是 OAuth2 标准错误（如登录限流锁定）直接透传，避免被包装成 server_error
+        if (authenticationException instanceof OAuth2AuthenticationException) {
+            return (OAuth2AuthenticationException)authenticationException;
+        }
         if (authenticationException instanceof UsernameNotFoundException) {
             return new OAuth2AuthenticationException(new OAuth2Error(OAuth2ErrorCodesExpand.USERNAME_NOT_FOUND,
                 this.messages.getMessage("JdbcDaoImpl.notFound", new Object[] {authentication.getName()},

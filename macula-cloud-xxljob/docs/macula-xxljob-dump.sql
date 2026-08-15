@@ -1,3 +1,10 @@
+/*!40101 SET NAMES utf8mb4 */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE DATABASE IF NOT EXISTS `xxl_job` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE `xxl_job`;
+
+
+
 -- MySQL dump 10.13  Distrib 8.1.0, for macos13.3 (x86_64)
 --
 -- Host: 127.0.0.1    Database: macula-xxljob
