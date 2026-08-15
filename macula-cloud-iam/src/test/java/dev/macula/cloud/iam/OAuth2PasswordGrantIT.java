@@ -97,6 +97,21 @@ class OAuth2PasswordGrantIT {
     }
 
     @Test
+    @DisplayName("BFF 代理登录 /login/token → 无需 client 凭证即可签发，错误透传")
+    void bffLoginTokenProxy() {
+        HttpHeaders json = new HttpHeaders();
+        json.setContentType(MediaType.APPLICATION_JSON);
+        // 成功：仅传 username/password/scope，不携带任何 client 凭证
+        Map<String, Object> ok = rest.postForObject("/login/token",
+            new HttpEntity<>("{\"username\":\"admin\",\"password\":\"admin\",\"scope\":\"userinfo\"}", json), Map.class);
+        assertNotNull(ok.get("access_token"), () -> "BFF 代理应签发 token: " + ok);
+        // 失败：错误密码的错误体应原样透传（不被包装成 server_error）
+        Map<String, Object> bad = rest.postForObject("/login/token",
+            new HttpEntity<>("{\"username\":\"admin\",\"password\":\"WRONG\",\"scope\":\"userinfo\"}", json), Map.class);
+        assertEquals("bad_credentials", bad.get("error"), () -> String.valueOf(bad));
+    }
+
+    @Test
     @DisplayName("正确账密 → 签发 access_token 且用户信息正确")
     void passwordGrantSuccess() {
         Map<String, Object> resp = requestToken("password", "username", "admin", "password", "admin",

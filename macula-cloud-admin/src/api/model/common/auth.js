@@ -3,17 +3,13 @@ import http from "@/utils/request"
 
 export default {
     systemToken: {
-        url: `${config.IAM_URL}/oauth2/token`,
+        // P2-3: BFF 代理——client 凭证由 IAM 服务端注入，前端产物不再包含 secret
+        url: `${config.IAM_URL}/login/token`,
         name: "macula V5 system提供隐式获取登录token接口",
         post: async function (data = {}, config = {}) {
-            const clientId = config.params?.client_id || 'e4da4a32-592b-46f0-ae1d-784310e88423'
-            const clientSecret = config.params?.client_secret || 'secret'
-            const formData = new URLSearchParams()
-            Object.keys(config.params || {}).forEach(k => formData.append(k, config.params[k]))
-            return await http.post(this.url, formData, {
+            return await http.post(this.url, data, {
                 headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'Authorization': 'Basic ' + btoa(clientId + ':' + clientSecret)
+                    'Content-Type': 'application/json'
                 }
             })
         }

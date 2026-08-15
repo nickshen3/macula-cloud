@@ -22,6 +22,10 @@ spring:
     sentinel:
       enabled: false
 macula:
+  # P2-3: 登录代理端点使用的 OAuth2 客户端凭证（生产用环境变量覆盖，勿入前端）
+  oauth2:
+    client-id: ${MACULA_OAUTH2_CLIENT_ID:e4da4a32-592b-46f0-ae1d-784310e88423}
+    client-secret: ${MACULA_OAUTH2_CLIENT_SECRET:secret}
   security:
     ignore-urls:
       - /swagger-ui/index.html

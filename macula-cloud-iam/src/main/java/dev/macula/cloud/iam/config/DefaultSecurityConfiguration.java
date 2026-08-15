@@ -64,6 +64,8 @@ public class DefaultSecurityConfiguration {
 
         http.authorizeHttpRequests()
                 .requestMatchers("/component/**").permitAll()
+                // P2-3: 登录令牌代理（BFF），前端不携带 client_secret；限流在 provider 层生效
+                .requestMatchers("/login/token").permitAll()
                 // P1-4: 监控端点白名单放行（仅 health/info/metrics/prometheus 已由 management 配置限定）
                 .requestMatchers("/actuator/health", "/actuator/info", "/actuator/metrics", "/actuator/prometheus").permitAll()
                 .requestMatchers("/h2-console/**").permitAll()

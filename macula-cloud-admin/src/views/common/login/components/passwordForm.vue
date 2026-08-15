@@ -98,15 +98,10 @@ export default {
 			var data = {
 				username: this.form.user,
 				password: this.form.password,
-				grant_type: 'password',
-				client_id: 'e4da4a32-592b-46f0-ae1d-784310e88423',
-				client_secret: 'secret',
 				scope: 'message.read message.write userinfo'
 			}
-			//获取token
-			var user = await this.$API.common_auth.systemToken.post({}, {
-				params: data
-			})
+			//获取token（P2-3: BFF 代理，client 凭证由服务端注入）
+			var user = await this.$API.common_auth.systemToken.post(data)
 			if (user.access_token) {
 				this.$TOOL.cookie.set("TOKEN", user.access_token, {
 					expires: 24 * 60 * 60
