@@ -75,8 +75,7 @@ curl -s -X POST "http://localhost:9010/oauth2/token" \
 
 ```bash
 cd macula-cloud-admin
-npm install --legacy-peer-deps --ignore-scripts
-node node_modules/esbuild/install.js    # Windows 下 postinstall 不自动执行，需手动
+npm install
 node node_modules/vite/bin/vite.js      # 不用 npm run dev（cmd 找不到 vite）
 ```
 
@@ -90,7 +89,7 @@ node node_modules/vite/bin/vite.js      # 不用 npm run dev（cmd 找不到 vit
 |------|------|------|
 | bash 后台 java 随终端退出而死 | 进程组信号 | 用上文 `cmd.exe /c start /b` 方式 |
 | `mvn package` 报 rename 失败 | 旧 java 进程占用 jar | `taskkill //F //IM java.exe` 后重试 |
-| npm postinstall 报 'node' is not recognized | cmd.exe PATH 问题 | 手动执行 esbuild install（见上文） |
+| npm postinstall 报 'node' is not recognized | 某些 shell 的 PATH 未传给 cmd 子进程（项目本身无需自定义 postinstall） | 换完整环境的终端重跑 `npm install`；esbuild 平台包（@esbuild/win32-x64 等）随 optionalDependencies 自动就位 |
 | 前端样式报 `Undefined function: color.channel` | sass < 1.79 | package.json 已锁 1.102.0，勿降级 |
 | 登录返回 server_error | 见 IMPROVEMENT-PLAN.md 历史问题清单 | 确认使用修复后代码基线 |
 

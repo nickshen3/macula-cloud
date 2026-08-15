@@ -71,12 +71,11 @@ jobs:
           cache: npm
           cache-dependency-path: macula-cloud-admin/package-lock.json
 
-      # --legacy-peer-deps/--ignore-scripts 为当前依赖树现实约束（P2-5 治理后移除）
+      # P2-5: lock 已固化版本树且无 peer 冲突，无需 flag（本地/CI 同口径）
       - name: Install
         run: |
           node --version && npm --version
-          npm install --legacy-peer-deps --ignore-scripts --no-audit --no-fund
-          node node_modules/esbuild/install.js
+          npm install --no-audit --no-fund
 
       - name: Build
         run: node node_modules/vite/bin/vite.js build
