@@ -167,3 +167,14 @@
 | P2-5 前端依赖治理 | ✅ npm install 无 flag（Windows 干净目录实测+CI Linux 验证） | lock 固化后无 peer 冲突；esbuild 平台包走 optionalDependencies 自动就位，删 --ignore-scripts 与手动 install 步骤；engines.node >=22 <23 |
 
 **P2 后环境变化**：Java 进程 12→9 模块（tinyid/xxljob 移除）；DB 库 macula-system + macula-snailjob（utf8mb4）；Nacos MACULA5 namespace 承载全部应用配置（dataId=服务名.yml，group=DEFAULT_GROUP）；system 直连端口 9082；snail-job 控制台 http://localhost:9086/snail-job（admin/admin）。
+
+### P3 执行记录（2026-08-15，P0~P3 计划全部完成；commit d092cb9）
+
+| 任务 | 结果 | 备注 |
+|------|------|------|
+| P3-1 核心链路收编 | ✅ 调研证实**已天然达成**：grant Provider/Converter、UserDetailsService、RegisteredClientRepository、AuthorizationService 均在自有代码；pom 显式依赖为 Spring 官方 SAS 1.5.5（属性名误导已澄清加注）；macula-boot 仅剩工具类引用 | 上游架构本身把认证核心放在应用仓库，收编零成本 |
+| P3-2 授权码+PKCE 迁移方案 | ✅ docs/oauth2-authcode-pkce-migration.md（待评审） | 实测 authorize+PKCE 基础设施就绪；推荐 BFF 路线（token 不进浏览器）；password grant T+3 月禁用/T+6 月移除 |
+| P3-3 升级窗口机制 | ✅ docs/upgrade-window-playbook.md | 季度评估节奏+官方矩阵铁律+时间戳 SNAPSHOT 锁定+回滚预案+版本登记表 |
+| P3-4 System 拆分评估 | ✅ 结论：现阶段不拆分 | 收益≈0（管理台场景 QPS 低、登录链路 4 表联查拆分代价高、近不可逆）；给出重评触发条件（代码量>20k 行/多团队/合规隔离）与三个低成本边界守护动作 |
+
+**计划全览**：P0（止血固化）→ P1（工程化：矩阵/测试/CI/观测）→ P2（收敛与安全：组件减二、BFF 零 secret、配置中心、依赖去 flag）→ P3（演进：收编确认+方案储备）全部完成。后续待办：P3-2 方案评审后的 5 阶段实施、SCA 热刷新深挖（P2-4 遗留）、P2 遗留的 Redis 独立实例生产化。
