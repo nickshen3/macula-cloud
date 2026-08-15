@@ -2,6 +2,7 @@ package com.xxl.job.admin.mapper;
 
 import com.xxl.job.admin.model.XxlJobGroup;
 import jakarta.annotation.Resource;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
@@ -14,7 +15,8 @@ public class XxlJobGroupMapperTest {
     @Resource
     private XxlJobGroupMapper xxlJobGroupMapper;
 
-    @Test
+    @Disabled("P1-3: 依赖真实 MySQL 环境的遗留测试，无容器化改造价值（该模块 P2-1 评估下线）")
+	@Test
     public void test(){
         List<XxlJobGroup> list = xxlJobGroupMapper.findAll();
 

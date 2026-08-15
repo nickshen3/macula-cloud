@@ -72,8 +72,10 @@ public abstract class OAuth2ResourceOwnerBaseAuthenticationProvider<T extends OA
     private DaoAuthenticationProvider lazyDaoProvider;
     private StringRedisTemplate rateLimitRedis;
 
-    /** 登录失败锁定阈值（账号/IP 双维度各自计数） */
-    private static final int LOGIN_MAX_FAIL = 5;
+    /** 登录失败锁定阈值：账号维度（严） */
+    private static final int LOGIN_MAX_FAIL_ACCT = 5;
+    /** 登录失败锁定阈值：IP 维度（宽，容忍 NAT 出口多用户正常误输） */
+    private static final int LOGIN_MAX_FAIL_IP = 10;
     /** 锁定时长（秒） */
     private static final long LOGIN_LOCK_SECONDS = 600;
     private static final String LOGIN_FAIL_KEY_PREFIX = "login:fail:";
@@ -160,8 +162,8 @@ public abstract class OAuth2ResourceOwnerBaseAuthenticationProvider<T extends OA
             return;
         }
         try {
-            if (failCount(redis, "acct", principal) >= LOGIN_MAX_FAIL
-                || failCount(redis, "ip", getClientIp()) >= LOGIN_MAX_FAIL) {
+            if (failCount(redis, "acct", principal) >= LOGIN_MAX_FAIL_ACCT
+                || failCount(redis, "ip", getClientIp()) >= LOGIN_MAX_FAIL_IP) {
                 LOGGER.warn("Login locked: principal=" + principal + " ip=" + getClientIp());
                 throw new OAuth2AuthenticationException(
                     new OAuth2Error(OAuth2ErrorCodes.ACCESS_DENIED, "登录失败次数过多，请 10 分钟后再试", null));

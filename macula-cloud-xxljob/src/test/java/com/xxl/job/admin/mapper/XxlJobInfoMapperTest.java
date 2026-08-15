@@ -4,6 +4,7 @@ import com.xxl.job.admin.model.XxlJobInfo;
 import com.xxl.job.admin.scheduler.misfire.MisfireStrategyEnum;
 import com.xxl.job.admin.scheduler.type.ScheduleTypeEnum;
 import jakarta.annotation.Resource;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,6 +20,7 @@ public class XxlJobInfoMapperTest {
 	@Resource
 	private XxlJobInfoMapper xxlJobInfoMapper;
 	
+	@Disabled("P1-3: 依赖真实 MySQL 环境的遗留测试，无容器化改造价值（该模块 P2-1 评估下线）")
 	@Test
 	public void pageList(){
 		List<XxlJobInfo> list = xxlJobInfoMapper.pageList(0, 20, 0, -1, null, null, null);
@@ -30,6 +32,7 @@ public class XxlJobInfoMapperTest {
 		List<XxlJobInfo> list2 = xxlJobInfoMapper.getJobsByGroup(1);
 	}
 	
+	@Disabled("P1-3: 依赖真实 MySQL 环境的遗留测试，无容器化改造价值（该模块 P2-1 评估下线）")
 	@Test
 	public void save_load(){
 		XxlJobInfo info = new XxlJobInfo();

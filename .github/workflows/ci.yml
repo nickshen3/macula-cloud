@@ -1,0 +1,64 @@
+# Macula Cloud CI（P1-3）
+# 后端：mvn verify（含 Testcontainers 集成测试）｜前端：vite build
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: 后端构建与集成测试
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      # parent 为 SNAPSHOT 时间戳版本，需从 central-portal-snapshots 解析（pom 已配置仓库）
+      - name: Build & Integration Test
+        run: mvn -B verify -Plocal
+
+      - name: 上传测试报告（失败时）
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failsafe-reports
+          path: "**/target/failsafe-reports/*.txt"
+          retention-days: 7
+
+  frontend:
+    name: 前端构建
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: macula-cloud-admin
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: macula-cloud-admin/package-lock.json
+
+      # --legacy-peer-deps/--ignore-scripts 为当前依赖树现实约束（P2-5 治理后移除）
+      - name: Install
+        run: |
+          npm install --legacy-peer-deps --ignore-scripts
+          node node_modules/esbuild/install.js
+
+      - name: Build
+        run: node node_modules/vite/bin/vite.js build
