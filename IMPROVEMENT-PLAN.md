@@ -186,3 +186,9 @@
 - **顺带发现并修复**：IAM/System 的 Redisson 此前**从未读到 Redis 配置**（一直用默认 localhost:6379 恰好命中 tutoring-redis）——Nacos yml 用的是 Boot 2.x 前缀 `spring.redis`，而 Boot 3.5 + Redisson 3.52 只绑 `spring.data.redis`。已把 iam/system 的 redis 段迁至 `spring.data.redis`；gateway 因自有 `RedisConfiguration` 显式绑定 `spring.redis` 而保留双前缀。
 - **验证**：三服务 Redisson 实连 6380（日志）；BFF 登录 E2E（curl 手动 cookie 链 + 浏览器全流程到控制台）全绿；session 落 macula-redis；tutoring-redis 无 macula key。
 - **运维提示**：curl 走 BFF 链路时 cookie jar 会出现双 JSESSIONID（匿名+认证），自动重放会带错——脚本化验证需手动提取 login 响应 Set-Cookie。
+
+## 附：登录链联调修复（2026-08-15 晚）
+
+1. **路由守卫 404 竞态**（c37f58b）：动态路由注册后旧导航以过期路由表放行渲染 catch-all；改 next({path, replace:true}) 重导航。表现为登录后偶发「无权限或找不到页面」。
+2. **axios withCredentials**（660dded）：Cookie 会话模式下 axios 未带凭据，全部组件 API 请求 401（无 CORS 头被浏览器拦成 Network Error）。一行修复，全站页面复验通过。
+3. **网关 CORS 加固（待办）**：网关对 401 响应不附加 CORS 头，导致未登录的跨域 401 在前端表现为 Network Error 而非 401（无法触发重登引导）。建议后续在网关 CORS 过滤器对所有响应（含错误）统一加头。
