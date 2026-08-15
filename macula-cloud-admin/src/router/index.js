@@ -137,7 +137,11 @@ router.beforeEach(async (to, from, next) => {
         })
         routes_404_r = router.addRoute(routes_404)
         if (to.matched.length == 0) {
-            router.push(to.fullPath);
+            // 动态路由刚注册、当前导航是旧路由表解析结果：replace 重导航重新 resolve
+            // （原 router.push + next() 双导航竞态会导致偶发 404「无权限或找不到页面」）
+            isGetRouter = true;
+            next({ path: to.fullPath, replace: true });
+            return false;
         }
         isGetRouter = true;
     }
