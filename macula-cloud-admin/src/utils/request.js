@@ -24,6 +24,8 @@ import router from '@/router';
 axios.defaults.baseURL = ''
 
 axios.defaults.timeout = sysConfig.TIMEOUT
+// P3-2: 认证改 HttpOnly Cookie 后，跨域 API 请求必须携带会话 Cookie（网关据其注入令牌）
+axios.defaults.withCredentials = true;
 let loadQuitMsgBox = false
 let menuRouteSuffixReg = /\/menus\/(my|routes)$/
 
