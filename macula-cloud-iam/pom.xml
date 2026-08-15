@@ -30,6 +30,9 @@
 
     <dependencies>
         <dependency>
+            <!-- P3-1 澄清：这是 Spring 官方 spring-security-oauth2-authorization-server（非 felord 第三方库），
+                 1.5.x 与 Boot 3.5.x 兼容；认证核心（grant Provider/Converter、UserDetails、
+                 RegisteredClientRepository、AuthorizationService）均已在自有代码 dev.macula.cloud.iam -->
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-oauth2-authorization-server</artifactId>
             <version>${spring-security-auth-server.version}</version>
