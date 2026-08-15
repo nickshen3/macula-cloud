@@ -4,11 +4,10 @@
 #   docker compose up -d
 # 首次启动 MySQL 会自动按文件名顺序导入 initdb 下的全部 SQL（utf8mb4）。
 #
-# 端口：MySQL 3306 / Nacos 8848(+9848 grpc) / Redis 6379(默认注释，见说明)
+# 端口：MySQL 3306 / Nacos 8848(+9848 grpc) / Redis 6380(映射容器 6379)
 #
 # 注意：
-# 1. Redis 默认注释——若宿主机 6379 已有 Redis（如其他项目容器）可直接复用；
-#    否则取消注释 redis 服务。
+# 1. Redis 映射 6380——宿主机 6379 已被其他项目占用；应用配置连 127.0.0.1:6380。
 # 2. Nacos 数据保存在 named volume，重启用 docker compose down（不加 -v）不丢数据。
 # 3. 连字符库名（macula-system 等）在 SQL 中必须用反引号包裹。
 
@@ -55,16 +54,23 @@ services:
       timeout: 3s
       retries: 30
 
-  # 默认注释：6379 常被宿主机已有 Redis 占用。需要独立 Redis 时取消注释，
-  # 并确认端口无冲突（或改左侧端口 + 同步修改应用配置）。
-  # redis:
-  #   image: redis:7-alpine
-  #   container_name: macula-redis
-  #   restart: unless-stopped
-  #   ports:
-  #     - "6379:6379"
-  #   volumes:
-  #     - macula-redis-data:/data
+  # macula-cloud 专用 Redis（与宿主机其他项目隔离）；宿主 6380 -> 容器 6379
+  redis:
+    image: redis:7-alpine
+    container_name: macula-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6380:6379"
+    volumes:
+      - macula-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
 
 volumes:
   macula-mysql-data:
+  macula-nacos-data:
+  macula-redis-data:

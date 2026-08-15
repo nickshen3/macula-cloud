@@ -177,4 +177,12 @@
 | P3-3 升级窗口机制 | ✅ docs/upgrade-window-playbook.md | 季度评估节奏+官方矩阵铁律+时间戳 SNAPSHOT 锁定+回滚预案+版本登记表 |
 | P3-4 System 拆分评估 | ✅ 结论：现阶段不拆分 | 收益≈0（管理台场景 QPS 低、登录链路 4 表联查拆分代价高、近不可逆）；给出重评触发条件（代码量>20k 行/多团队/合规隔离）与三个低成本边界守护动作 |
 
-**计划全览**：P0（止血固化）→ P1（工程化：矩阵/测试/CI/观测）→ P2（收敛与安全：组件减二、BFF 零 secret、配置中心、依赖去 flag）→ P3（演进：收编确认+方案储备）全部完成。后续待办：P3-2 方案评审后的 5 阶段实施、SCA 热刷新深挖（P2-4 遗留）、P2 遗留的 Redis 独立实例生产化。
+**计划全览**：P0（止血固化）→ P1（工程化：矩阵/测试/CI/观测）→ P2（收敛与安全：组件减二、BFF 零 secret、配置中心、依赖去 flag）→ P3（演进：收编确认+方案储备）全部完成。后续待办：SCA 热刷新深挖（P2-4 遗留）；~~Redis 独立实例~~ 已于 2026-08-15 完成（见 P2-2 下记录）。
+
+## 附：Redis 独立化实施记录（2026-08-15，P2 遗留收口）
+
+- **动机**：用户明确 macula-cloud 与 tutoring 项目无关；开发环境此前连宿主机 tutoring-redis:6379 属临时借用。
+- **动作**：compose 新增 `macula-redis`（redis:7-alpine，AOF 开启，宿主 6380->容器 6379）；三服务 Nacos 配置端口改 6380 并同步 MACULA5 namespace；tutoring-redis 中 macula 前缀残留 key（bff:*/macula:* 共 66 个）已清空。
+- **顺带发现并修复**：IAM/System 的 Redisson 此前**从未读到 Redis 配置**（一直用默认 localhost:6379 恰好命中 tutoring-redis）——Nacos yml 用的是 Boot 2.x 前缀 `spring.redis`，而 Boot 3.5 + Redisson 3.52 只绑 `spring.data.redis`。已把 iam/system 的 redis 段迁至 `spring.data.redis`；gateway 因自有 `RedisConfiguration` 显式绑定 `spring.redis` 而保留双前缀。
+- **验证**：三服务 Redisson 实连 6380（日志）；BFF 登录 E2E（curl 手动 cookie 链 + 浏览器全流程到控制台）全绿；session 落 macula-redis；tutoring-redis 无 macula key。
+- **运维提示**：curl 走 BFF 链路时 cookie jar 会出现双 JSESSIONID（匿名+认证），自动重放会带错——脚本化验证需手动提取 login 响应 Set-Cookie。

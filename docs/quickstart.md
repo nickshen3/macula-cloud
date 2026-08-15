@@ -14,7 +14,7 @@
 | Node.js | 22.x | 前端构建 |
 | Docker | 24+ | 含 compose 插件 |
 
-**端口占用检查**（全部需空闲）：`3306` MySQL、`8848/9848` Nacos、`6379` Redis、`9000` Gateway、`9010` IAM、`9082` System、`5900` 前端。
+**端口占用检查**（全部需空闲）：`3306` MySQL、`8848/9848` Nacos、`6380` Redis（macula 专用）、`9000` Gateway、`9010` IAM、`9082` System、`5900` 前端。
 > 坑：9081 曾被其他项目的 Docker 容器（端口转发）抢占，System 已改用 9082；遇到类似 `Port already in use` 先 `netstat -ano | findstr <端口>` 查占用者 PID，再 `tasklist /FI "PID eq <PID>"` 定位进程（com.docker.backend.exe = Docker 转发，对应 `docker ps` 里的容器）。
 
 ---
@@ -36,7 +36,7 @@ docker exec macula-mysql mysql -u root -e "SELECT nickname FROM \`macula-system\
 curl http://localhost:8848/nacos/v1/console/health/readiness   # 期望 OK
 ```
 
-Redis：compose 中默认注释。宿主机已有 Redis（6379 无密码）可直接复用；没有则取消 `deploy/docker-compose.yml` 中 redis 段注释。
+Redis：compose 内置 `macula-redis`（宿主 `6380` -> 容器 6379，与其他项目隔离），`docker compose up -d` 一并启动。
 
 > 库命名说明：`macula-system` 等连字符库名在 SQL 语句中**必须反引号包裹**，手工执行 SQL 时注意。
 
