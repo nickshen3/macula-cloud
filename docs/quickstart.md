@@ -14,7 +14,8 @@
 | Node.js | 22.x | 前端构建 |
 | Docker | 24+ | 含 compose 插件 |
 
-**端口占用检查**（全部需空闲）：`3306` MySQL、`8848/9848` Nacos、`6379` Redis、`9000` Gateway、`9010` IAM、`9081` System、`5900` 前端。
+**端口占用检查**（全部需空闲）：`3306` MySQL、`8848/9848` Nacos、`6379` Redis、`9000` Gateway、`9010` IAM、`9082` System、`5900` 前端。
+> 坑：9081 曾被其他项目的 Docker 容器（端口转发）抢占，System 已改用 9082；遇到类似 `Port already in use` 先 `netstat -ano | findstr <端口>` 查占用者 PID，再 `tasklist /FI "PID eq <PID>"` 定位进程（com.docker.backend.exe = Docker 转发，对应 `docker ps` 里的容器）。
 
 ---
 

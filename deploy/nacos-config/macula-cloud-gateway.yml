@@ -1,0 +1,77 @@
+spring:
+  cloud:
+    nacos:
+      discovery:
+        enabled: true
+        server-addr: 127.0.0.1:8848
+        namespace: MACULA5
+        # group:
+    gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowed-origin-patterns: "*"
+            allowed-methods: "*"
+            allowed-headers: "*"
+            allow-credentials: true
+            max-age: 1800
+        add-to-simple-url-handler-mapping: true
+      routes:
+        - id: macula-cloud-system
+          uri: lb://macula-cloud-system
+          predicates:
+            - Path=/system/**
+          filters:
+            - StripPrefix=1
+  security:
+    oauth2:
+      resourceserver:
+        opaquetoken:
+          client-id: e4da4a32-592b-46f0-ae1d-784310e88423
+          client-secret: secret
+          introspection-uri: http://127.0.0.1:9010/oauth2/introspect
+  redis:
+    database: 0
+    host: 127.0.0.1
+    port: 6379
+    system:
+      database: 0
+      host: 127.0.0.1
+      port: 6379
+
+macula:
+  gateway:
+    sign-switch: true                       # 接口签名全局开关，默认true
+    force-sign: false                       # 是否强制校验指定URL的接口签名，默认false
+    crypto-switch: true                    # 接口加解密全局开关，默认true
+    force-crypto: false                    # 是否强制校验指定URL的接口要不要加解密，默认false
+    protect-urls: # 需要保护的URL，前端可通过/gateway/protect/urls获取
+      crypto: # 加密
+        - /system/api/v1/app
+      sign: # 签名
+        - /system/api/v1/app
+    security:
+      only-auth-urls: /mallapi/**
+      ignore-urls:
+        - /system/api/token
+        - /system/api/token/introspect
+
+logging:
+  level:
+    root: info
+    dev.macula.cloud: debug
+  file:
+    name: ${user.home}/logs/${spring.application.name}/${spring.application.name}.log
+
+# P1-4 可观测性：白名单只读端点（生产隔离可用 management.server.port 独立管理端口）
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when_authorized
+  metrics:
+    tags:
+      application: ${spring.application.name}

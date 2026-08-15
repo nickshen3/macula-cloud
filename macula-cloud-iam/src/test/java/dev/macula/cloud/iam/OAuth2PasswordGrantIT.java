@@ -47,7 +47,9 @@ import static org.junit.jupiter.api.Assertions.*;
  * 环境：Testcontainers 临时 MySQL（复用 docs dump 初始化）+ Redis，禁用 Nacos。
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
-    "spring.cloud.nacos.config.enabled=false", "spring.cloud.nacos.discovery.enabled=false"})
+    "spring.cloud.nacos.config.enabled=false", "spring.cloud.nacos.discovery.enabled=false",
+    // P2-4: 配置已迁 Nacos；测试环境无 Nacos，置空 config.import 使业务配置从 test classpath 的 application.yml 加载
+    "spring.config.import="})
 @Testcontainers
 @DisplayName("OAuth2 密码模式认证链路")
 class OAuth2PasswordGrantIT {
