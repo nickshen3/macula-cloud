@@ -145,3 +145,13 @@
 | P0-6 分支保护 | 📋 指引已交付（需仓库管理员网页操作） | Settings → Branches → main：勾选 Require PR + Required status checks（待 P1-3 CI 就绪后启用） |
 
 **验证环境状态**：MySQL/Nacos 由新 compose 管理（named volume 持久化）；Redis 复用宿主机 tutoring-redis:6379（跨项目共享，生产环境需独立实例——列入 P2）；三后端 + 前端运行正常，登录链路含限流全绿。
+
+### P1 执行记录（2026-08-15，全部完成）
+
+| 任务 | 结果 | 备注 |
+|------|------|------|
+| P1-1 升级官方版本矩阵 | ✅ parent 切 -13（Boot 3.5.13 + Cloud 2025.0.2），移除全部 5 处 compatibility-verifier 禁用，校验器真实启用下全回归通过 | 上游 -13 已自带官方矩阵组合，直接采用；后续升级沿此模式（新时间戳版本+全回归） |
+| P1-2 认证链路集成测试 | ✅ OAuth2PasswordGrantIT（Testcontainers），本地/CI 均 6/6 全绿 | 测试反哺设计：IP 维度阈值独立为 10 次（NAT 容忍）；修复 oAuth2AuthenticationException() 透传缺陷 | 
+| P1-3 CI 流水线 | ✅ 双 job 全绿（commit 84e6e35 验证） | **踩坑实录**：①本地绿 CI 红两类根因——前端 sideM.vue import 大小写错误（Windows 不敏感/Linux 敏感，已修+全扫无残留）、tinyid ServerTest 隐式依赖本机 MySQL（已 skipTests，P2-2 随模块处理）；②诊断手段：check-runs annotations 匿名可读，logs/artifacts 需权限 |
+| P1-4 可观测性 | ✅ 三服务 health/prometheus 200，指标带 application 标签 | 需显式加 spring-boot-starter-actuator + micrometer-registry-prometheus（传递依赖不可靠）；IAM 安全链补白名单放行 |
+| P1-5 Redis HA 方案 | ✅ deploy/redis-ha.md | Sentinel 3 节点拓扑+compose 示例+故障演练步骤+运维要点；应用侧仅改配置 |
