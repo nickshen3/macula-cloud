@@ -1,6 +1,9 @@
 # P3-2 OAuth2 授权码 + PKCE 迁移方案（Web 端）
 
-> 状态：方案待评审 ｜ 起草：2026-08-15 ｜ 关联：IMPROVEMENT-PLAN.md P3-2、P2-3（BFF）
+> 状态：**已实施并验证**（2026-08-15，评审通过：路线 A / 直接切换 / 开销可接受）｜ 关联：IMPROVEMENT-PLAN.md P3-2、P2-3（BFF）
+
+> **实施结果**：阶段 1–4 一次完成（无存量依赖，取消灰度双轨）；浏览器 E2E 与 OAuth2AuthCodeIT（3 用例）全绿。
+> 关键实现差异见文末「实施补记」；password grant 按时间表进入弃用期（T+3 月禁用）。
 
 ## 1. 背景与动机
 
@@ -73,3 +76,24 @@
 1. 路线 A（BFF）是否认可？有无更倾向 B/C 的场景？
 2. password grant 退出时间表（T+3/T+6 月）节奏是否合适？
 3. 阶段 3 网关 SESSION→token 注入的额外延迟是否可接受（预计 <5ms/req）？
+
+
+---
+
+## 8. 实施补记（2026-08-15）
+
+| 方案设计 | 实际落地 | 原因 |
+|---------|---------|------|
+| 网关 GlobalFilter 注入 | **WebFilter（order=-200）** | 网关自带 SecurityWebFilterChain（order=-100）先于 GlobalFilter 做 opaque introspection，注入必须更早 |
+| redirect_uri = 网关域名 | 开发期 = `http://localhost:9010/auth/callback`（IAM 直连） | Cookie 按 host 匹配（不含 port），localhost 域全端口共享；生产改配置为网关域名 |
+| 刷新：网关直调 /oauth2/token | 网关调 IAM `/auth/refresh`（凭 session） | client_secret 只允许 IAM 持有；refresh 不轮换（reuse=1）并发刷新无锁安全 |
+| 灰度 2 周双轨 | 直接切换 | 无存量程序使用 password grant（用户确认） |
+
+**踩坑实录**：
+1. `MaculaRegisteredClientRepository.findByClientId` 有 Redis `@Cacheable`（JDK 序列化）——**改 sys_oauth2_client 表必须同步清缓存 key** `macula:cache:cloud:iam:oauth2:client::{clientId}`，重启服务无效（缓存 TTL 24h）
+2. Reactor 中 `chain.filter()` 返回 `Mono<Void>`（永远 empty）——对它套 `switchIfEmpty` 会用原始 exchange 二次转发丢失注入；用 `defaultIfEmpty` 哨兵分流
+3. Redisson reactive 完成信号在 Redisson netty 线程；后续链路（Security introspection 的阻塞 Redis 调用）会触发 sync-on-netty 防死锁检测——`publishOn(boundedElastic())` 切换
+4. 网关 Redisson 默认 Kryo5 codec，读 IAM StringRedisTemplate 写的原始字符串需 `getBucket(key, StringCodec.INSTANCE)`
+5. TestRestTemplate（Apache HttpClient 工厂）自动跟随 302 且 `HttpURLConnection.setFollowRedirects(false)` 无效——集成测试用 JDK HttpClient（默认 NEVER 跟随）
+
+**password grant 弃用时间表**：T+3 月（2026-11）从 client 表移除 password/sms（新客户端一律授权码+PKCE）；T+6 月（2027-02）删除 Provider 代码与 password IT。运维脚本迁移至 client_credentials。

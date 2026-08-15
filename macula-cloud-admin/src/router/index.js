@@ -61,7 +61,7 @@ router.beforeEach(async (to, from, next) => {
     //动态标题
     document.title = to.meta.title ? `${to.meta.title} - ${config.APP_NAME}` : `${config.APP_NAME}`
 
-    let token = tool.cookie.get("TOKEN");
+    let token = tool.data.get("SESSION_OK");
 
     if (to.path === "/login") {
         //删除路由(替换当前layout路由)
@@ -76,6 +76,39 @@ router.beforeEach(async (to, from, next) => {
     if (routes.findIndex(r => r.path === to.path) >= 0) {
         next();
         return false;
+    }
+
+    if (!token && !isGetRouter) {
+        // P3-2: 授权码 BFF session 探测（HttpOnly Cookie 自动携带；失效则回登录页重新发起授权）
+        try {
+            const me = await fetch(config.API_URL + "/system/api/v1/users/me", {
+                credentials: "include"
+            });
+            if (me.ok) {
+                // 加载用户信息与菜单（P3-2 从登录组件移入路由守卫：回调后首次进入时装载）
+                const [meJson, routesJson] = await Promise.all([
+                    me.json(),
+                    fetch(config.API_URL + "/system/api/v1/menus/routes", {credentials: "include"}).then(r => r.json())
+                ])
+                if (meJson.success) {
+                    tool.data.set("USER_INFO", meJson.data)
+                    tool.data.set("PERMISSIONS", meJson.data.perms || [])
+                }
+                if (routesJson.success) {
+                    const roles = meJson.data.roles || []
+                    const menu = tool.treeFilter(routesJson.data, node => {
+                        const containsRoles = roles.some(role => !role.startsWith("!") && node.meta.roles.includes(role));
+                        const containsNegatedRoles = roles.some(role => role.startsWith("!") && node.meta.roles.includes(role.substring(1)));
+                        return containsRoles & !containsNegatedRoles
+                    })
+                    tool.data.set("MENU", menu)
+                }
+                tool.data.set("SESSION_OK", true)
+                token = true
+            }
+        } catch (e) {
+            // 网络异常时按未登录处理
+        }
     }
 
     if (!token) {

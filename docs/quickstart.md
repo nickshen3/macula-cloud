@@ -79,7 +79,7 @@ npm install
 node node_modules/vite/bin/vite.js      # 不用 npm run dev（cmd 找不到 vite）
 ```
 
-访问 **http://localhost:5900**，账号 `admin / admin`。
+访问 **http://localhost:5900**，点击登录跳转 IAM 统一认证页，账号 `admin / admin`（授权码+PKCE，token 由服务端 session 承载，前端零凭证）。
 
 ---
 

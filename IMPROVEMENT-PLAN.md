@@ -173,7 +173,7 @@
 | 任务 | 结果 | 备注 |
 |------|------|------|
 | P3-1 核心链路收编 | ✅ 调研证实**已天然达成**：grant Provider/Converter、UserDetailsService、RegisteredClientRepository、AuthorizationService 均在自有代码；pom 显式依赖为 Spring 官方 SAS 1.5.5（属性名误导已澄清加注）；macula-boot 仅剩工具类引用 | 上游架构本身把认证核心放在应用仓库，收编零成本 |
-| P3-2 授权码+PKCE 迁移方案 | ✅ docs/oauth2-authcode-pkce-migration.md（待评审） | 实测 authorize+PKCE 基础设施就绪；推荐 BFF 路线（token 不进浏览器）；password grant T+3 月禁用/T+6 月移除 |
+| P3-2 授权码+PKCE 迁移 | ✅ **已实施**（评审通过：路线A/直接切换）：IAM BFF 三端点（authorize/callback/refresh/logout）+ 网关 WebFilter(-200) session 注入+懒刷新 + 前端跳转登录与守卫探测；E2E 浏览器全流程与 OAuth2AuthCodeIT 3/3 绿；浏览器零 JS token（HttpOnly Cookie） | 方案与实施补记（5 条踩坑）见 docs/oauth2-authcode-pkce-migration.md；password grant 进入弃用期：T+3 月（2026-11）client 表移除、T+6 月（2027-02）删代码 |
 | P3-3 升级窗口机制 | ✅ docs/upgrade-window-playbook.md | 季度评估节奏+官方矩阵铁律+时间戳 SNAPSHOT 锁定+回滚预案+版本登记表 |
 | P3-4 System 拆分评估 | ✅ 结论：现阶段不拆分 | 收益≈0（管理台场景 QPS 低、登录链路 4 表联查拆分代价高、近不可逆）；给出重评触发条件（代码量>20k 行/多团队/合规隔离）与三个低成本边界守护动作 |
 

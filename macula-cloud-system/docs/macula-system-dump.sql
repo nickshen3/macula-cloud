@@ -348,7 +348,7 @@ VALUES (1, 'e2fa7e64-249b-46f0-ae1d-797610e88615', '2022-04-12 06:21:20',
        (2, 'e4da4a32-592b-46f0-ae1d-784310e88423', '2022-04-12 06:21:20',
         '{bcrypt}$2a$10$uHWdt9Ackncw6s5BJlYO9OOdpD3Q44aan0SjttGRCZU2qvvk3fAZO', NULL, 'macula-cloud-gateway',
         'client_secret_basic,client_secret_post', 'authorization_code,client_credentials,refresh_token,password,sms',
-        'http://127.0.0.1:8083/login/oauth2/code/felord', 'message.read,message.write,userinfo', 0, 1, NULL, NULL, 300,
+        'http://localhost:9010/auth/callback,http://127.0.0.1:8083/login/oauth2/code/felord', 'message.read,message.write,userinfo', 1, 0, NULL, NULL, 300,
         43200, 'reference', 1, 2592000, 'RS256', 'employee', 1, '*SYSADM', '2023-04-12 14:24:40', '*SYSADM',
         '2023-04-12 14:24:44');
 UNLOCK

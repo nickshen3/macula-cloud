@@ -66,6 +66,9 @@ public class DefaultSecurityConfiguration {
                 .requestMatchers("/component/**").permitAll()
                 // P2-3: 登录令牌代理（BFF），前端不携带 client_secret；限流在 provider 层生效
                 .requestMatchers("/login/token").permitAll()
+                // P3-2: 授权码+PKCE 的 BFF 端点（authorize/callback/refresh/logout）；
+                // 安全性由 state 一次性校验 + S256 PKCE + HttpOnly cookie 保证
+                .requestMatchers("/auth/authorize", "/auth/callback", "/auth/refresh", "/auth/logout").permitAll()
                 // P1-4: 监控端点白名单放行（仅 health/info/metrics/prometheus 已由 management 配置限定）
                 .requestMatchers("/actuator/health", "/actuator/info", "/actuator/metrics", "/actuator/prometheus").permitAll()
                 .requestMatchers("/h2-console/**").permitAll()

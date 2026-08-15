@@ -90,85 +90,11 @@ export default {
 	methods: {
 		...mapActions(useTenantStore, ['pushTenantOptions', 'updateTenantLabel', 'updateTenantId', 'clearTenantOptions']),
 		async login() {
-
-			var validate = await this.$refs.loginForm.validate().catch(() => { })
-			if (!validate) { return false }
-
+			// P3-2: 授权码+PKCE（BFF 路线）——跳转 IAM 统一认证，token 由服务端 session 承载，
+			// 浏览器仅持 HttpOnly Cookie；账密在 IAM 官方登录表单提交，前端不再经手
 			this.islogin = true
-			var data = {
-				username: this.form.user,
-				password: this.form.password,
-				scope: 'message.read message.write userinfo'
-			}
-			//获取token（P2-3: BFF 代理，client 凭证由服务端注入）
-			var user = await this.$API.common_auth.systemToken.post(data)
-			if (user.access_token) {
-				this.$TOOL.cookie.set("TOKEN", user.access_token, {
-					expires: 24 * 60 * 60
-				})
-			} else {
-				this.islogin = false
-				ElMessage.warning(user.msg || user.error_description || user.error)
-				return false
-			}
-
-			var userInfo = await this.$API.common_auth.getUserInfo.get()
-			if (userInfo.success) {
-				this.$TOOL.data.set("USER_INFO", userInfo.data)
-			} else {
-				this.islogin = false
-				ElMessage.warning(userInfo.msg)
-				return false
-			}
-
-			//获取我的租户列表（普通应用这段需要去掉）
-			var tenantOptionsRes = await this.$API.system_tenant.tenant.options.get()
-			if (tenantOptionsRes.success) {
-				if (tenantOptionsRes.data.length == 0) {
-					this.islogin = false
-					ElMessageBox.alert("当前用户无任何菜单权限，请联系系统管理员", "无权限访问", {
-						type: 'error',
-						center: true
-					})
-					return false
-				}
-				this.clearTenantOptions()
-				this.pushTenantOptions(tenantOptionsRes.data)
-				this.updateTenantId(tenantOptionsRes.data[0].value)
-				this.updateTenantLabel(tenantOptionsRes.data[0].label)
-			}
-
-			// 处理菜单
-			// 用户的角色是否包含路由返回菜单对应的角色
-			var res = await this.$API.common_auth.getRoutes.get()
-			if (res.success) {
-				var routes = res.data
-				var roles = userInfo.data.roles
-				var perms = userInfo.data.perms
-				
-				// var menu = this.$TOOL.treeFilter(routes, node => {
-            	// 	return node.meta.roles ? node.meta.roles.filter(item => roles.indexOf(item) > -1).length > 0 : true
-        		// })
-				// 支持排除反向角色
-				var menu = this.$TOOL.treeFilter(routes, node => {
-					const containsRoles = roles.some(role => !role.startsWith("!") && node.meta.roles.includes(role));
-					const containsNegatedRoles = roles.some(role => role.startsWith("!") && node.meta.roles.includes(role.substring(1)));
-					return containsRoles & !containsNegatedRoles
-				})
-
-				this.$TOOL.data.set("MENU", menu)
-				this.$TOOL.data.set("PERMISSIONS", perms)
-			} else {
-				this.islogin = false
-				ElMessage.warning(res.msg)
-				return false
-			}
-
-			this.$router.replace({
-				path: '/'
-			})
-			ElMessage.success("Login Success 登录成功")
-			this.islogin = false
+			window.location.href = import.meta.env.VITE_APP_IAM_URL + '/auth/authorize'
+		
 		}
 	}
 }

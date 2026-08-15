@@ -89,6 +89,8 @@
 			confirmButtonClass: 'el-button--danger'
 		  }).then(() => {
 			this.$TOOL.data.clear()
+			// P3-2: 跳转 BFF 登出（吊销 token + 清 HttpOnly Cookie）
+			window.location.href = import.meta.env.VITE_APP_IAM_URL + '/auth/logout'
 			this.clearTenantOptions()
 			this.$router.replace({path: '/login'});
 		  }).catch(() => {
