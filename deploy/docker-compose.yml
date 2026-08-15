@@ -28,9 +28,9 @@ services:
     volumes:
       - macula-mysql-data:/var/lib/mysql
       # 首次初始化按文件名序执行；前缀保证顺序
+      # （tinyid 已于 P2-2 下线，其 dump 已随模块移除）
       - ../macula-cloud-system/docs/macula-system-dump.sql:/docker-entrypoint-initdb.d/01-macula-system.sql:ro
-      - ../macula-cloud-tinyid/docs/macula-tinyid-dump.sql:/docker-entrypoint-initdb.d/02-macula-tinyid.sql:ro
-      - ../macula-cloud-xxljob/docs/macula-xxljob-dump.sql:/docker-entrypoint-initdb.d/03-xxl-job.sql:ro
+      - ../macula-cloud-xxljob/docs/macula-xxljob-dump.sql:/docker-entrypoint-initdb.d/02-xxl-job.sql:ro
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 5s

@@ -61,9 +61,6 @@ class OAuth2PasswordGrantIT {
         .withCopyFileToContainer(
             MountableFile.forHostPath(Paths.get("..", "macula-cloud-system", "docs", "macula-system-dump.sql")),
             "/docker-entrypoint-initdb.d/01-macula-system.sql")
-        .withCopyFileToContainer(
-            MountableFile.forHostPath(Paths.get("..", "macula-cloud-tinyid", "docs", "macula-tinyid-dump.sql")),
-            "/docker-entrypoint-initdb.d/02-macula-tinyid.sql")
         .withCommand("--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci");
 
     @Container
