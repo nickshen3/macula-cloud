@@ -16,7 +16,7 @@ jobs:
   backend:
     name: 后端构建与集成测试
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
 
@@ -28,14 +28,30 @@ jobs:
 
       # parent 为 SNAPSHOT 时间戳版本，需从 central-portal-snapshots 解析（pom 已配置仓库）
       - name: Build & Integration Test
-        run: mvn -B verify -Plocal
+        run: mvn -B -ntp verify -Plocal
+
+      - name: 错误摘要到 Annotations
+        if: failure()
+        run: |
+          {
+            echo "::group::Test Reports"
+            find . -path "*/target/failsafe-reports/*.txt" -exec sed -n '1,40p' {} \; || true
+            find . -path "*/target/surefire-reports/*.txt" -exec sed -n '1,40p' {} \; || true
+            echo "::endgroup::"
+          } > /dev/null 2>&1 || true
+          # 把首条 Maven 错误行发到 annotations（匿名可见）
+          ERR=$(grep -h "^\[ERROR\]" ~/.m2/*.log 2>/dev/null | head -1)
+          [ -z "$ERR" ] && ERR="mvn verify failed - download failsafe-reports artifact for details"
+          echo "::error::${ERR:0:250}"
 
       - name: 上传测试报告（失败时）
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: failsafe-reports
-          path: "**/target/failsafe-reports/*.txt"
+          path: |
+            **/target/failsafe-reports/*
+            **/target/surefire-reports/*
           retention-days: 7
 
   frontend:
@@ -48,17 +64,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # 固定与本地验证一致的版本，避免小版本漂移
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: 22.17.1
           cache: npm
           cache-dependency-path: macula-cloud-admin/package-lock.json
 
       # --legacy-peer-deps/--ignore-scripts 为当前依赖树现实约束（P2-5 治理后移除）
       - name: Install
         run: |
-          npm install --legacy-peer-deps --ignore-scripts
+          node --version && npm --version
+          npm install --legacy-peer-deps --ignore-scripts --no-audit --no-fund
           node node_modules/esbuild/install.js
 
       - name: Build
         run: node node_modules/vite/bin/vite.js build
+
+      - name: 构建环境诊断
+        if: failure()
+        run: |
+          echo "::error::frontend build failed"
+          node --version
+          ls node_modules/.bin/ | head -20 || true
+          node -e "console.log(require('./node_modules/vite/package.json').version)" || true

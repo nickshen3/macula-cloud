@@ -33,5 +33,14 @@
             <groupId>dev.macula.boot</groupId>
             <artifactId>macula-boot-starter-cloud-alibaba-scg</artifactId>
         </dependency>
+        <!-- P1-4 可观测性：显式依赖，不赌 starter 传递 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>
     </dependencies>
 </project>

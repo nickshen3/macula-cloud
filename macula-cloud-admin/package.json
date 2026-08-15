@@ -52,5 +52,8 @@
     "vite": "^4.1.0",
     "vite-plugin-inspect": "^0.7.15",
     "vitest": "^0.29.2"
+  },
+  "optionalDependencies": {
+    "rollup": "^3.30.0"
   }
 }

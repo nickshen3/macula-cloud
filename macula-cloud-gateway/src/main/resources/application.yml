@@ -62,3 +62,16 @@ logging:
     dev.macula.cloud: debug
   file:
     name: ${user.home}/logs/${spring.application.name}/${spring.application.name}.log
+
+# P1-4 可观测性：白名单只读端点（生产隔离可用 management.server.port 独立管理端口）
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when_authorized
+  metrics:
+    tags:
+      application: ${spring.application.name}
