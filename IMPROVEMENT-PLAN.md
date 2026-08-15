@@ -155,3 +155,15 @@
 | P1-3 CI 流水线 | ✅ 双 job 全绿（commit 84e6e35 验证） | **踩坑实录**：①本地绿 CI 红两类根因——前端 sideM.vue import 大小写错误（Windows 不敏感/Linux 敏感，已修+全扫无残留）、tinyid ServerTest 隐式依赖本机 MySQL（已 skipTests，P2-2 随模块处理）；②诊断手段：check-runs annotations 匿名可读，logs/artifacts 需权限 |
 | P1-4 可观测性 | ✅ 三服务 health/prometheus 200，指标带 application 标签 | 需显式加 spring-boot-starter-actuator + micrometer-registry-prometheus（传递依赖不可靠）；IAM 安全链补白名单放行 |
 | P1-5 Redis HA 方案 | ✅ deploy/redis-ha.md | Sentinel 3 节点拓扑+compose 示例+故障演练步骤+运维要点；应用侧仅改配置 |
+
+### P2 执行记录（2026-08-15，全部完成；commits 2b74b4c/87a3c9f/5d18672/99c2b69/477ec5e，CI 全绿）
+
+| 任务 | 结果 | 备注 |
+|------|------|------|
+| P2-1 调度二选一 | ✅ 保留 snail-job，下线 xxl-job | xxl-job 内嵌 3000+ 行 admin 源码自维护成本高；snail-job 仅 1 启动类+官方 starter 1.9.0（Boot 3 原生），功能超集。冒烟：控制台 200、auth/login 签发 JWT（admin/admin，前端预 md5 后 sha256 入库）、节点 rebalance 正常；官方 1.9.0 schema（23 表）入库并代码化 |
+| P2-2 tinyid 下线 | ✅ 零消费者实证（无 pom 依赖/代码调用/网关路由；ID 实际由 MySQL AUTO_INCREMENT 生成） | 减 1 进程+1 库；根 pom 移 module、compose/IT 移除 dump、DB drop |
+| P2-3 secret 治理 | ✅ BFF 代理 POST /login/token：服务端注入凭证、错误体透传（含限流）、生产环境变量覆盖（MACULA_OAUTH2_*） | DoD 达成：dist 产物 grep 不到 e4da4a32/client_secret；IT 新增 BFF 用例 7/7 绿；端口回填用 WebServerInitializedEvent（RANDOM_PORT 兼容） |
+| P2-4 Nacos 配置中心 | ✅ 业务配置全量迁 Nacos（MACULA5 三 dataId）；bootstrap.yml 退役；application.yml 最小骨架+spring.config.import(optional:nacos:)；deploy/nacos-config/ 为 git source of truth | 附带修复：system 9081→9082（被其他项目 Docker 容器占用）；nacos-config starter 由框架传递无需显式。**已知限制**：SCA 2025.0.0.0 下 @Value/@ConfigurationProperties 热重绑定未完全生效（refresh keys 仅 spring.application.version；排除 bootstrap starter 对照实验失败已回滚），列入 P3；“改配置不重新打包”以重启生效达成 |
+| P2-5 前端依赖治理 | ✅ npm install 无 flag（Windows 干净目录实测+CI Linux 验证） | lock 固化后无 peer 冲突；esbuild 平台包走 optionalDependencies 自动就位，删 --ignore-scripts 与手动 install 步骤；engines.node >=22 <23 |
+
+**P2 后环境变化**：Java 进程 12→9 模块（tinyid/xxljob 移除）；DB 库 macula-system + macula-snailjob（utf8mb4）；Nacos MACULA5 namespace 承载全部应用配置（dataId=服务名.yml，group=DEFAULT_GROUP）；system 直连端口 9082；snail-job 控制台 http://localhost:9086/snail-job（admin/admin）。
