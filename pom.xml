@@ -66,7 +66,6 @@
         <skipNexusStagingDeployMojo>true</skipNexusStagingDeployMojo>
         <easyexcel.version>3.1.3</easyexcel.version>
         <spring-security-auth-server.version>1.5.5</spring-security-auth-server.version>
-        <xxl-sso.version>2.2.0</xxl-sso.version>
         <java.version>17</java.version>
     </properties>
 
@@ -75,7 +74,6 @@
         <module>macula-cloud-gateway</module>
         <module>macula-cloud-iam</module>
         <module>macula-cloud-system</module>
-        <module>macula-cloud-xxljob</module>
         <module>macula-cloud-rocketmq</module>
         <module>macula-cloud-seata</module>
         <module>macula-cloud-docs</module>

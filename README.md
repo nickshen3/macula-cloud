@@ -52,13 +52,11 @@
 
 分布式事务管理
 
-### Macula Cloud XxlJob 任务管理
+### Macula Cloud SnailJob 任务管理（唯一调度组件）
 
-xxljob任务调度
+Snail Job 任务管理和重试管理（xxl-job 已于 P2-1 下线：模块内嵌 3000+ 行 admin 源码自维护成本高，且与 snail-job 功能重叠）
 
-### Macula Cloud SnailJob 任务管理
-
-Snail Job任务管理和重试管理
+控制台 http://localhost:9086/snail-job（默认账号 admin/admin，服务端 17888 grpc）
 
 ### Macula Cloud RocketMQ MQ管理（TODO）
 

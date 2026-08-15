@@ -28,9 +28,9 @@ services:
     volumes:
       - macula-mysql-data:/var/lib/mysql
       # 首次初始化按文件名序执行；前缀保证顺序
-      # （tinyid 已于 P2-2 下线，其 dump 已随模块移除）
+      # （tinyid 已于 P2-2 下线；xxl-job 已于 P2-1 下线，调度统一 snail-job）
       - ../macula-cloud-system/docs/macula-system-dump.sql:/docker-entrypoint-initdb.d/01-macula-system.sql:ro
-      - ../macula-cloud-xxljob/docs/macula-xxljob-dump.sql:/docker-entrypoint-initdb.d/02-xxl-job.sql:ro
+      - ../macula-cloud-snailjob/docs/snail_job_mysql.sql:/docker-entrypoint-initdb.d/02-macula-snailjob.sql:ro
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 5s

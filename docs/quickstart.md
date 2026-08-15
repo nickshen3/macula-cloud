@@ -25,7 +25,7 @@ cd deploy
 docker compose up -d
 ```
 
-首次启动 MySQL 自动导入全部 SQL（utf8mb4，库：`macula-system`/`xxl_job`；tinyid 已随 P2-2 下线）。
+首次启动 MySQL 自动导入全部 SQL（utf8mb4，库：`macula-system`/`macula-snailjob`；tinyid、xxl-job 已分别随 P2-2/P2-1 下线）。
 
 验证：
 
